@@ -166,7 +166,8 @@ function codeExchange(r) {
                         r.log("OIDC success, creating session " + r.variables.request_id);
                         r.variables.new_session = tokenset.id_token; // Create key-value store entry
                         r.headersOut["Set-Cookie"] = "auth_token=" + r.variables.request_id + "; " + r.variables.oidc_cookie_flags;
-                        r.return(302, r.variables.redirect_base + r.variables.cookie_auth_redir);
+                        var uuid = r.varaiables.state.split("##")[1]
+                        r.return(302, r.variables.redirect_base.replace("auth",uuid) + r.variables.cookie_auth_redir);
                    }
                 );
             } catch (e) {
@@ -256,10 +257,10 @@ function getAuthZArgs(r) {
         r.variables.pkce_id = c.createHash('sha256').update(String(Math.random())).digest('base64url');
         var pkce_code_challenge = c.createHash('sha256').update(pkce_code_verifier).digest('base64url');
         r.variables.pkce_code_verifier = pkce_code_verifier;
-
-        authZArgs += "&code_challenge_method=S256&code_challenge=" + pkce_code_challenge + "&state=" + r.variables.pkce_id;
+        var pkce_with_custom = r.variables.pkce_id + "##" + r.variables.uuid;
+        authZArgs += "&code_challenge_method=S256&code_challenge=" + pkce_code_challenge + "&state=" + pkce_with_custom;
     } else {
-        authZArgs += "&state=0";
+        authZArgs += "&state=" + r.varaiables.uuid;
     }
     return authZArgs;
 }
