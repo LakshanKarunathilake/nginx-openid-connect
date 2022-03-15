@@ -28,7 +28,7 @@ function auth(r) {
         r.return(302, r.variables.oidc_authz_endpoint + getAuthZArgs(r));
         return;
     }
-    
+
     // Pass the refresh token to the /_refresh location so that it can be
     // proxied to the IdP in exchange for a new id_token
     r.subrequest("/_refresh", "token=" + r.variables.refresh_token,
@@ -166,8 +166,9 @@ function codeExchange(r) {
                         r.log("OIDC success, creating session " + r.variables.request_id);
                         r.variables.new_session = tokenset.id_token; // Create key-value store entry
                         r.headersOut["Set-Cookie"] = "auth_token=" + r.variables.request_id + "; " + r.variables.oidc_cookie_flags;
+                        r.variables.redirect_base = r.variables.redirect_base.replace("auth",r.variables.uuid);
                         r.return(302, r.variables.redirect_base + r.variables.cookie_auth_redir);
-                   }
+                    }
                 );
             } catch (e) {
                 r.error("OIDC authorization code sent but token response is not JSON. " + reply.responseBody);
@@ -253,13 +254,14 @@ function getAuthZArgs(r) {
 
     if ( r.variables.oidc_pkce_enable == 1 ) {
         var pkce_code_verifier = c.createHmac('sha256', r.variables.oidc_hmac_key).update(String(Math.random())).digest('hex');
-        r.variables.pkce_id = c.createHash('sha256').update(String(Math.random())).digest('base64url');
+        r.variables.pkce_id = r.variables.uuid
         var pkce_code_challenge = c.createHash('sha256').update(pkce_code_verifier).digest('base64url');
         r.variables.pkce_code_verifier = pkce_code_verifier;
 
-        authZArgs += "&code_challenge_method=S256&code_challenge=" + pkce_code_challenge + "&state=" + r.variables.pkce_id;
+        // authZArgs += "&code_challenge_method=S256&code_challenge=" + pkce_code_challenge + "&state=" + r.variables.uuid + "--" + r.variables.pkce_id;
+        authZArgs += "&code_challenge_method=S256&code_challenge=" + pkce_code_challenge + "&state=" + r.variables.uuid;
     } else {
-        authZArgs += "&state=0";
+        authZArgs += "&state=" + r.variables.uuid;
     }
     return authZArgs;
 }
@@ -271,5 +273,5 @@ function idpClientAuth(r) {
         return "code=" + r.variables.arg_code + "&code_verifier=" + r.variables.pkce_code_verifier;
     } else {
         return "code=" + r.variables.arg_code + "&client_secret=" + r.variables.oidc_client_secret;
-    }   
+    }
 }
